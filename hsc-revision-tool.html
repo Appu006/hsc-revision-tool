@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSC Maths — Revision Tool</title>
+<script>
+MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+  svg: { fontCache: 'global' },
+  startup: { typeset: false }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #18181c;
+    --surface2: #222228;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.16);
+    --text: #f0eee8;
+    --text-muted: #888;
+    --text-faint: #555;
+    --accent: #6c63ff;
+    --accent-soft: rgba(108,99,255,0.12);
+    --accent-border: rgba(108,99,255,0.4);
+    --green: #22c77a;
+    --green-soft: rgba(34,199,122,0.1);
+    --amber: #f5a623;
+    --amber-soft: rgba(245,166,35,0.1);
+    --red: #e05252;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Inter', 'Segoe UI', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,15,17,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-size: 15px; font-weight: 600; letter-spacing: -0.02em;
+    display: flex; align-items: center; gap: 8px; cursor: pointer; text-decoration: none; color: var(--text);
+  }
+  .nav-logo .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .nav-tag { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: var(--text-muted); text-transform: uppercase; }
+
+  /* SCREENS */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* HOME */
+  .home-hero {
+    max-width: 760px; margin: 0 auto;
+    padding: 5rem 2rem 3rem;
+    text-align: center;
+  }
+  .eyebrow {
+    display: inline-block;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    background: var(--accent-soft);
+    border-radius: 99px; padding: 4px 14px;
+    margin-bottom: 1.5rem;
+  }
+  h1.hero-title {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 700; letter-spacing: -0.03em; line-height: 1.15;
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+  h1.hero-title span { color: var(--accent); }
+  .hero-sub {
+    font-size: 16px; color: var(--text-muted); max-width: 520px; margin: 0 auto 3rem;
+    line-height: 1.7;
+  }
+
+  .stats-row {
+    display: flex; justify-content: center; gap: 3rem; margin-bottom: 3.5rem;
+    flex-wrap: wrap;
+  }
+  .stat { text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .topics-section { max-width: 860px; margin: 0 auto; padding: 0 2rem 5rem; }
+  .section-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: 1rem;
+  }
+  .topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+
+  .topic-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    display: flex; flex-direction: column; gap: 10px;
+    position: relative; overflow: hidden;
+  }
+  .topic-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent); opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .topic-card:hover { border-color: var(--border-hover); background: var(--surface2); transform: translateY(-1px); }
+  .topic-card:hover::before { opacity: 1; }
+  .topic-card.selected { border-color: var(--accent-border); background: var(--accent-soft); }
+  .topic-card.selected::before { opacity: 1; }
+  .topic-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .topic-icon { font-size: 22px; }
+  .topic-qcount {
+    font-size: 11px; font-weight: 600; color: var(--text-faint);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 99px; padding: 2px 9px;
+  }
+  .topic-card.selected .topic-qcount { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent); }
+  .topic-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .topic-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+  .start-bar {
+    max-width: 860px; margin: 0 auto 2rem; padding: 0 2rem;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 22px; border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: transparent; color: var(--text);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    font-family: inherit; transition: all 0.12s;
+    text-decoration: none;
+  }
+  .btn:hover { background: var(--surface2); border-color: var(--border-hover); }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--accent); border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #7c75ff; border-color: #7c75ff; opacity: 1; }
+  .btn-sm { padding: 7px 14px; font-size: 13px; }
+  .start-hint { font-size: 13px; color: var(--text-muted); }
+
+  /* QUESTION SCREEN */
+  .q-layout {
+    max-width: 760px; margin: 0 auto; padding: 2rem;
+  }
+  .q-nav {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  .progress-wrap { flex: 1; min-width: 120px; }
+  .progress-track {
+    height: 3px; background: var(--surface2); border-radius: 99px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent); border-radius: 99px;
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+  }
+  .progress-text { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+
+  .q-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .tag {
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 99px;
+    letter-spacing: 0.04em;
+  }
+  .tag-year { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
+  .tag-topic { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+  .tag-marks { background: var(--green-soft); color: var(--green); border: 1px solid rgba(34,199,122,0.25); }
+  .tag-ai { background: var(--amber-soft); color: var(--amber); border: 1px solid rgba(245,166,35,0.25); }
+
+  .q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 2rem;
+    margin-bottom: 1rem;
+  }
+  .q-text { font-size: 15px; line-height: 1.75; color: var(--text); }
+  .q-parts { margin-top: 1.25rem; }
+  .q-part {
+    display: flex; gap: 14px; padding: 10px 0;
+    border-top: 1px solid var(--border);
+    font-size: 14px; line-height: 1.7; color: var(--text);
+  }
+  .q-part-label { font-weight: 600; color: var(--accent); min-width: 28px; flex-shrink: 0; }
+
+  .solution-card {
+    background: var(--green-soft);
+    border: 1px solid rgba(34,199,122,0.2);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 2rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .solution-card.visible { display: block; }
+  .sol-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 1rem;
+  }
+  .sol-step {
+    font-size: 14px; line-height: 1.8; color: var(--text);
+    padding: 4px 0;
+  }
+  .sol-step + .sol-step { border-top: 1px solid rgba(34,199,122,0.1); }
+
+  .q-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+
+  /* AI PANEL */
+  .ai-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    display: none;
+    margin-top: 0.5rem;
+  }
+  .ai-panel.visible { display: block; }
+  .ai-panel-title {
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+    letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 12px;
+  }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip {
+    font-size: 12px; padding: 5px 13px; border-radius: 99px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text-muted); cursor: pointer; transition: all 0.12s;
+  }
+  .chip:hover { border-color: var(--border-hover); color: var(--text); }
+  .chip.selected { border-color: var(--accent-border); background: var(--accent-soft); color: var(--accent); }
+  .ai-input {
+    width: 100%; padding: 10px 14px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); font-size: 13px; font-family: inherit;
+    margin-bottom: 12px; transition: border-color 0.15s;
+  }
+  .ai-input:focus { outline: none; border-color: var(--accent-border); }
+  .ai-input::placeholder { color: var(--text-faint); }
+
+  .generating {
+    display: none; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-muted); margin-top: 10px;
+  }
+  .generating.visible { display: flex; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: blink 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+  /* RESULTS */
+  .results-wrap {
+    max-width: 560px; margin: 4rem auto; padding: 0 2rem;
+    text-align: center;
+  }
+  .result-big { font-size: 72px; font-weight: 700; letter-spacing: -0.04em; color: var(--text); line-height: 1; margin-bottom: 4px; }
+  .result-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 2.5rem; }
+  .result-table {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 2rem; text-align: left;
+  }
+  .result-row { display: flex; justify-content: space-between; padding: 12px 1.5rem; font-size: 14px; }
+  .result-row + .result-row { border-top: 1px solid var(--border); }
+  .result-row span:first-child { color: var(--text-muted); }
+  .result-row span:last-child { font-weight: 600; color: var(--text); }
+  .result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    nav { padding: 0 1rem; }
+    .home-hero { padding: 3rem 1rem 2rem; }
+    .topics-section, .start-bar { padding-left: 1rem; padding-right: 1rem; }
+    .q-layout { padding: 1rem; }
+    .q-card { padding: 1.25rem; }
+    h1.hero-title { font-size: 1.8rem; }
+    .stats-row { gap: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" onclick="showHome()" href="#">
+    <div class="dot"></div>
+    HSC Maths
+  </a>
+  <div class="nav-right">
+    <span class="nav-tag">Advanced · 2 Unit</span>
+  </div>
+</nav>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="home-hero">
+    <div class="eyebrow">HSC Advanced Mathematics</div>
+    <h1 class="hero-title">Past questions.<br><span>AI variations.</span><br>One place.</h1>
+    <p class="hero-sub">Every past HSC question, sorted by topic. Practise exactly what you need — then use AI to generate harder variations until you've got it.</p>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-num">182</div><div class="stat-label">past questions</div></div>
+      <div class="stat"><div class="stat-num">6</div><div class="stat-label">topics covered</div></div>
+      <div class="stat"><div class="stat-num">1999–2024</div><div class="stat-label">HSC papers</div></div>
+    </div>
+  </div>
+
+  <div class="topics-section">
+    <div class="section-label">Choose a topic</div>
+    <div class="topic-grid" id="topic-grid"></div>
+  </div>
+
+  <div class="start-bar">
+    <button class="btn btn-primary" onclick="startSession()">
+      Start session &rarr;
+    </button>
+    <span class="start-hint" id="start-hint">Select a topic above to begin</span>
+  </div>
+</div>
+
+<!-- QUESTION -->
+<div id="screen-question" class="screen">
+  <div class="q-layout">
+
+    <div class="q-nav">
+      <button class="btn btn-sm" onclick="showHome()">&#8592; Topics</button>
+      <div class="progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+        <div class="progress-text" id="progress-text">Question 1 of 5</div>
+      </div>
+      <button class="btn btn-sm" onclick="nextQuestion()">Next &rarr;</button>
+    </div>
+
+    <div class="q-meta">
+      <span class="tag tag-year" id="q-year"></span>
+      <span class="tag tag-topic" id="q-topic-tag"></span>
+      <span class="tag tag-marks" id="q-marks"></span>
+      <span class="tag tag-ai" id="q-ai-tag" style="display:none">&#10024; AI generated</span>
+    </div>
+
+    <div class="q-card">
+      <div class="q-text" id="q-text"></div>
+      <div class="q-parts" id="q-parts"></div>
+    </div>
+
+    <div class="solution-card" id="solution-card">
+      <div class="sol-title">Worked solution</div>
+      <div id="sol-steps"></div>
+    </div>
+
+    <div class="q-actions">
+      <button class="btn" onclick="toggleSolution()">
+        <span id="sol-icon">&#128065;</span>
+        <span id="sol-label">Show solution</span>
+      </button>
+      <button class="btn" onclick="toggleAI()">
+        &#10024; Generate variation
+      </button>
+    </div>
+
+    <div class="ai-panel" id="ai-panel">
+      <div class="ai-panel-title">Customise the next question</div>
+      <div class="chips" id="ai-chips"></div>
+      <input class="ai-input" id="ai-input" placeholder="Or describe your own requirement, e.g. 'harder bounds, negative exponents'…" />
+      <button class="btn btn-primary" onclick="generateAI()">&#10024; Generate question</button>
+      <div class="generating" id="generating">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span>Generating your question…</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" class="screen">
+  <div class="results-wrap">
+    <div class="result-big" id="result-big"></div>
+    <div class="result-sub" id="result-sub"></div>
+    <div class="result-table" id="result-table"></div>
+    <div class="result-actions">
+      <button class="btn" onclick="showHome()">&#8592; New session</button>
+      <button class="btn btn-primary" onclick="restartSameTopic()">Retry topic &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOPICS = [
+  {
+    id: 'calculus',
+    name: 'Differentiation',
+    icon: '∂',
+    count: 42,
+    desc: 'Product, chain and quotient rules. Stationary points, tangents, curve sketching.',
+  },
+  {
+    id: 'integration',
+    name: 'Integration',
+    icon: '∫',
+    count: 38,
+    desc: 'Definite and indefinite integrals, areas, reverse chain rule, trigonometric integrals.',
+  },
+  {
+    id: 'trig',
+    name: 'Trigonometry',
+    icon: '∿',
+    count: 29,
+    desc: 'Equations, identities, graphs, transformations, and inverse trig functions.',
+  },
+  {
+    id: 'logs',
+    name: 'Logarithms & Exponentials',
+    icon: 'eˣ',
+    count: 24,
+    desc: 'Log laws, exponential equations, natural log, and applications to growth/decay.',
+  },
+  {
+    id: 'sequences',
+    name: 'Sequences & Series',
+    icon: 'Σ',
+    count: 31,
+    desc: 'Arithmetic and geometric sequences, sigma notation, sum to infinity.',
+  },
+  {
+    id: 'probability',
+    name: 'Probability',
+    icon: 'P()',
+    count: 18,
+    desc: 'Conditional probability, Venn diagrams, tree diagrams, counting methods.',
+  },
+];
+
+const QUESTIONS = {
+  calculus: [
+    {
+      year: '2022 HSC', marks: '3 marks', isAI: false,
+      text: 'Consider the function \\(f(x) = x^3 \\ln x\\).',
+      parts: [
+        { label: '(a)', text: 'Differentiate \\(f(x)\\) with respect to \\(x\\).' },
+        { label: '(b)', text: 'Hence find the equation of the tangent to \\(y = f(x)\\) at the point where \\(x = e\\).' },
+      ],
+      solution: [
+        'Using the product rule: \\(f\'(x) = 3x^2 \\ln x + x^3 \\cdot \\dfrac{1}{x} = 3x^2 \\ln x + x^2\\)',
+        'At \\(x = e\\): \\(f\'(e) = 3e^2 \\cdot 1 + e^2 = 4e^2\\)',
+        'Point on curve: \\((e,\\; e^3)\\). Tangent: \\(y - e^3 = 4e^2(x - e)\\), i.e. \\(y = 4e^2 x - 3e^3\\)',
+      ],
+    },
+    {
+      year: '2019 HSC', marks: '3 marks', isAI: false,
+      text: 'Find all stationary points of \\(y = 2x^3 - 9x^2 + 12x - 4\\) and determine their nature.',
+      parts: [],
+      solution: [
+        '\\(y\' = 6x^2 - 18x + 12 = 6(x-1)(x-2)\\)',
+        'Stationary points at \\(x = 1\\) and \\(x = 2\\).',
+        '\\(y\'\' = 12x - 18\\). At \\(x=1\\): \\(y\'\'=-6<0\\) — local maximum. At \\(x=2\\): \\(y\'\'=6>0\\) — local minimum.',
+      ],
+    },
+    {
+      year: '2017 HSC', marks: '2 marks', isAI: false,
+      text: 'Differentiate \\(y = \\dfrac{\\sin x}{x^2 + 1}\\) with respect to \\(x\\).',
+      parts: [],
+      solution: [
+        'Using the quotient rule with \\(u = \\sin x\\), \\(v = x^2+1\\):',
+        '\\(\\dfrac{dy}{dx} = \\dfrac{(x^2+1)\\cos x - 2x\\sin x}{(x^2+1)^2}\\)',
+      ],
+    },
+  ],
+  integration: [
+    {
+      year: '2021 HSC', marks: '3 marks', isAI: false,
+      text: 'Evaluate the following integrals.',
+      parts: [
+        { label: '(a)', text: 'Show that \\(\\displaystyle\\int_0^{\\pi/2} \\cos^2 x\\, dx = \\dfrac{\\pi}{4}\\).' },
+        { label: '(b)', text: 'Hence evaluate \\(\\displaystyle\\int_0^{\\pi/2} \\sin^2 x\\, dx\\).' },
+      ],
+      solution: [
+        'Using \\(\\cos^2 x = \\dfrac{1+\\cos 2x}{2}\\):',
+        '\\(\\displaystyle\\int_0^{\\pi/2} \\dfrac{1+\\cos 2x}{2}\\,dx = \\left[\\dfrac{x}{2} + \\dfrac{\\sin 2x}{4}\\right]_0^{\\pi/2} = \\dfrac{\\pi}{4} + 0 = \\dfrac{\\pi}{4}\\) ✓',
+        'Since \\(\\sin^2 x + \\cos^2 x = 1\\), \\(\\displaystyle\\int_0^{\\pi/2} \\sin^2 x\\,dx = \\dfrac{\\pi}{2} - \\dfrac{\\pi}{4} = \\dfrac{\\pi}{4}\\)',
+      ],
+    },
+    {
+      year: '2023 HSC', marks: '2 marks', isAI: false,
+      text: 'Find \\(\\displaystyle\\int \\frac{3x^2 + 2}{x^3 + 2x}\\,dx\\).',
+      parts: [],
+      solution: [
+        'Observe that the numerator is the derivative of the denominator:',
+        '\\(\\dfrac{d}{dx}(x^3 + 2x) = 3x^2 + 2\\)',
+        'Therefore \\(\\displaystyle\\int \\dfrac{3x^2+2}{x^3+2x}\\,dx = \\ln|x^3+2x| + C\\)',
+      ],
+    },
+    {
+      year: '2018 HSC', marks: '3 marks', isAI: false,
+      text: 'Find the area of the region bounded by the curve \\(y = e^x - 1\\), the \\(x\\)-axis, and the line \\(x = 2\\).',
+      parts: [],
+      solution: [
+        'The curve crosses the \\(x\\)-axis at \\(x = 0\\).',
+        '\\(\\text{Area} = \\displaystyle\\int_0^2 (e^x - 1)\\,dx = \\left[e^x - x\\right]_0^2\\)',
+        '\\(= (e^2 - 2) - (1 - 0) = e^2 - 3 \\approx 4.389\\) square units.',
+      ],
+    },
+  ],
+  trig: [
+    {
+      year: '2020 HSC', marks: '3 marks', isAI: false,
+      text: 'Solve the equation \\(2\\sin^2\\theta - \\sin\\theta - 1 = 0\\) for \\(0 \\le \\theta \\le 2\\pi\\).',
+      parts: [],
+      solution: [
+        'Factorise: \\((2\\sin\\theta + 1)(\\sin\\theta - 1) = 0\\)',
+        '\\(\\sin\\theta = 1\\) gives \\(\\theta = \\dfrac{\\pi}{2}\\)',
+        '\\(\\sin\\theta = -\\dfrac{1}{2}\\) gives \\(\\theta = \\dfrac{7\\pi}{6},\\; \\dfrac{11\\pi}{6}\\)',
+      ],
+    },
+    {
+      year: '2016 HSC', marks: '2 marks', isAI: false,
+      text: 'Prove the identity \\(\\dfrac{1 - \\cos 2\\theta}{\\sin 2\\theta} = \\tan\\theta\\).',
+      parts: [],
+      solution: [
+        'LHS \\(= \\dfrac{1 - (1 - 2\\sin^2\\theta)}{2\\sin\\theta\\cos\\theta} = \\dfrac{2\\sin^2\\theta}{2\\sin\\theta\\cos\\theta}\\)',
+        '\\(= \\dfrac{\\sin\\theta}{\\cos\\theta} = \\tan\\theta\\) = RHS ✓',
+      ],
+    },
+  ],
+  logs: [
+    {
+      year: '2018 HSC', marks: '3 marks', isAI: false,
+      text: 'Solve \\(\\log_2(x+3) + \\log_2(x-1) = 5\\).',
+      parts: [],
+      solution: [
+        '\\(\\log_2[(x+3)(x-1)] = 5 \\Rightarrow (x+3)(x-1) = 32\\)',
+        '\\(x^2 + 2x - 3 = 32 \\Rightarrow x^2 + 2x - 35 = 0 \\Rightarrow (x+7)(x-5) = 0\\)',
+        'Since \\(x > 1\\) (domain restriction), \\(x = 5\\).',
+      ],
+    },
+    {
+      year: '2020 HSC', marks: '3 marks', isAI: false,
+      text: 'The population of bacteria \\(P\\) at time \\(t\\) hours satisfies \\(P = P_0 e^{kt}\\). Initially there are 500 bacteria, and after 3 hours there are 4000.',
+      parts: [
+        { label: '(a)', text: 'Find the value of \\(k\\), giving your answer to 3 significant figures.' },
+        { label: '(b)', text: 'Find the time at which the population first reaches 10 000.' },
+      ],
+      solution: [
+        '\\(4000 = 500e^{3k} \\Rightarrow e^{3k} = 8 \\Rightarrow k = \\dfrac{\\ln 8}{3} \\approx 0.693\\)',
+        '\\(10000 = 500e^{kt} \\Rightarrow e^{kt} = 20 \\Rightarrow t = \\dfrac{\\ln 20}{k} = \\dfrac{3\\ln 20}{\\ln 8} \\approx 4.39\\) hours.',
+      ],
+    },
+  ],
+  sequences: [
+    {
+      year: '2022 HSC', marks: '4 marks', isAI: false,
+      text: 'A geometric series has first term \\(a = 3\\) and common ratio \\(r\\).',
+      parts: [
+        { label: '(a)', text: 'If the sum to infinity is 12, find \\(r\\).' },
+        { label: '(b)', text: 'Find the smallest value of \\(n\\) such that the sum of the first \\(n\\) terms exceeds 11.9.' },
+      ],
+      solution: [
+        '\\(S_\\infty = \\dfrac{a}{1-r} = \\dfrac{3}{1-r} = 12 \\Rightarrow r = \\dfrac{3}{4}\\)',
+        '\\(S_n = 12\\!\\left(1-\\!\\left(\\dfrac{3}{4}\\right)^n\\!\\right) > 11.9 \\Rightarrow \\left(\\dfrac{3}{4}\\right)^n < \\dfrac{1}{120}\\)',
+        'Taking logs: \\(n > \\dfrac{\\ln(1/120)}{\\ln(3/4)} \\approx 16.3\\). So the smallest value is \\(n = 17\\).',
+      ],
+    },
+    {
+      year: '2019 HSC', marks: '3 marks', isAI: false,
+      text: 'The sum of the first \\(n\\) terms of an arithmetic series is \\(S_n = 3n^2 + 2n\\).',
+      parts: [
+        { label: '(a)', text: 'Find the first term and common difference.' },
+        { label: '(b)', text: 'Find the sum of terms from the 10th to the 20th term inclusive.' },
+      ],
+      solution: [
+        '\\(T_1 = S_1 = 5\\). \\(T_2 = S_2 - S_1 = 16 - 5 = 11\\). Common difference \\(d = 6\\).',
+        'Check: \\(T_n = S_n - S_{n-1} = 3n^2+2n - 3(n-1)^2 - 2(n-1) = 6n - 1\\). ✓',
+        '\\(S_{20} - S_9 = (3(400)+40) - (3(81)+18) = 1240 - 261 = 979\\)',
+      ],
+    },
+  ],
+  probability: [
+    {
+      year: '2021 HSC', marks: '3 marks', isAI: false,
+      text: 'In a group of 12 students, 7 study Mathematics and 6 study Physics, with 4 studying both.',
+      parts: [
+        { label: '(a)', text: 'Find the probability that a randomly chosen student studies Mathematics or Physics.' },
+        { label: '(b)', text: 'Given the student studies Physics, find the probability they also study Mathematics.' },
+      ],
+      solution: [
+        'By inclusion–exclusion: \\(P(M \\cup P) = \\dfrac{7+6-4}{12} = \\dfrac{9}{12} = \\dfrac{3}{4}\\)',
+        '\\(P(M \\mid P) = \\dfrac{P(M \\cap P)}{P(P)} = \\dfrac{4/12}{6/12} = \\dfrac{4}{6} = \\dfrac{2}{3}\\)',
+      ],
+    },
+    {
+      year: '2023 HSC', marks: '2 marks', isAI: false,
+      text: 'A bag contains 4 red and 6 blue marbles. Two marbles are drawn without replacement. Find the probability that both marbles are the same colour.',
+      parts: [],
+      solution: [
+        '\\(P(\\text{both red}) = \\dfrac{4}{10} \\times \\dfrac{3}{9} = \\dfrac{12}{90}\\)',
+        '\\(P(\\text{both blue}) = \\dfrac{6}{10} \\times \\dfrac{5}{9} = \\dfrac{30}{90}\\)',
+        '\\(P(\\text{same colour}) = \\dfrac{12+30}{90} = \\dfrac{42}{90} = \\dfrac{7}{15}\\)',
+      ],
+    },
+  ],
+};
+
+const AI_CHIPS = {
+  calculus: ['Harder chain rule', 'Implicit differentiation', 'Related rates', 'Second derivative test', 'Parametric curves'],
+  integration: ['Integration by parts', 'Different bounds', 'Substitution required', 'Harder polynomial', 'Area between curves'],
+  trig: ['Different interval', 'Compound angles', 'Harder equation', 'Exact values only', 'Prove identity'],
+  logs: ['Natural log only', 'Exponential equation', 'Change of base', 'Growth and decay', 'Harder indices'],
+  sequences: ['Arithmetic series', 'Combined A&G', 'Sigma notation', 'Real-world context', 'Limiting sum'],
+  probability: ['Conditional probability', 'Tree diagram', 'Counting methods', 'With replacement', 'Binomial'],
+};
+
+const AI_QUESTIONS = {
+  integration: {
+    text: 'Find the following integral using the substitution \\(u = \\ln x\\).',
+    parts: [
+      { label: '(a)', text: '\\(\\displaystyle\\int_1^{e^2} \\frac{(\\ln x)^2}{x}\\,dx\\)' },
+      { label: '(b)', text: 'Hence find \\(\\displaystyle\\int_1^{e^2} \\frac{\\ln x}{x}\\,dx\\).' },
+    ],
+    solution: [
+      'Let \\(u = \\ln x\\), \\(du = \\frac{1}{x}dx\\). When \\(x=1\\), \\(u=0\\); when \\(x=e^2\\), \\(u=2\\).',
+      '\\(\\displaystyle\\int_0^2 u^2\\,du = \\left[\\dfrac{u^3}{3}\\right]_0^2 = \\dfrac{8}{3}\\)',
+      'For (b): \\(\\displaystyle\\int_1^{e^2} \\dfrac{\\ln x}{x}\\,dx = \\left[\\dfrac{(\\ln x)^2}{2}\\right]_1^{e^2} = \\dfrac{4}{2} - 0 = 2\\)',
+    ],
+  },
+  calculus: {
+    text: 'Consider \\(f(x) = e^{x^2}\\).',
+    parts: [
+      { label: '(a)', text: 'Find \\(f\'(x)\\) using the chain rule.' },
+      { label: '(b)', text: 'Find the gradient of the tangent to \\(y = f(x)\\) at \\(x = 1\\), giving your answer in exact form.' },
+    ],
+    solution: [
+      '\\(f\'(x) = 2x\\,e^{x^2}\\) by the chain rule.',
+      'At \\(x=1\\): \\(f\'(1) = 2e\\).',
+    ],
+  },
+  trig: {
+    text: 'Solve \\(\\cos 2\\theta + \\cos\\theta = 0\\) for \\(0 \\le \\theta \\le 2\\pi\\).',
+    parts: [],
+    solution: [
+      'Use \\(\\cos 2\\theta = 2\\cos^2\\theta - 1\\): \\(2\\cos^2\\theta + \\cos\\theta - 1 = 0\\)',
+      '\\((2\\cos\\theta - 1)(\\cos\\theta + 1) = 0\\)',
+      '\\(\\cos\\theta = \\dfrac{1}{2} \\Rightarrow \\theta = \\dfrac{\\pi}{3}, \\dfrac{5\\pi}{3}\\); \\(\\cos\\theta = -1 \\Rightarrow \\theta = \\pi\\)',
+    ],
+  },
+  logs: {
+    text: 'The value \\(V\\) of a car decreases according to \\(V = 30000\\,e^{-0.15t}\\), where \\(t\\) is years after purchase.',
+    parts: [
+      { label: '(a)', text: 'Find the value after 4 years, to the nearest dollar.' },
+      { label: '(b)', text: 'After how many years will the car be worth less than $5000?' },
+    ],
+    solution: [
+      '\\(V(4) = 30000\\,e^{-0.6} \\approx \\$16{,}488\\)',
+      '\\(30000\\,e^{-0.15t} < 5000 \\Rightarrow e^{-0.15t} < \\dfrac{1}{6} \\Rightarrow -0.15t < -\\ln 6 \\Rightarrow t > \\dfrac{\\ln 6}{0.15} \\approx 11.9\\) years.',
+    ],
+  },
+  sequences: {
+    text: 'An arithmetic sequence has third term 11 and seventh term 27.',
+    parts: [
+      { label: '(a)', text: 'Find the first term and common difference.' },
+      { label: '(b)', text: 'Find the sum of the first 20 terms.' },
+    ],
+    solution: [
+      'From \\(T_3 = a + 2d = 11\\) and \\(T_7 = a + 6d = 27\\): solving gives \\(d = 4\\), \\(a = 3\\).',
+      '\\(S_{20} = \\dfrac{20}{2}(2(3) + 19(4)) = 10(6+76) = 820\\)',
+    ],
+  },
+  probability: {
+    text: 'Three cards are drawn without replacement from a standard deck of 52. Find the probability that all three are hearts.',
+    parts: [],
+    solution: [
+      '\\(P = \\dfrac{13}{52} \\times \\dfrac{12}{51} \\times \\dfrac{11}{50} = \\dfrac{1716}{132600} = \\dfrac{11}{850}\\)',
+    ],
+  },
+};
+
+let currentTopic = null;
+let currentQ = 0;
+let qList = [];
+let solVisible = false;
+let aiVisible = false;
+let selectedChips = [];
+
+function setScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showHome() {
+  setScreen('home');
+  currentQ = 0; qList = []; solVisible = false; aiVisible = false;
+}
+
+function renderTopics() {
+  document.getElementById('topic-grid').innerHTML = TOPICS.map(t => `
+    <div class="topic-card" id="tc-${t.id}" onclick="selectTopic('${t.id}')">
+      <div class="topic-card-top">
+        <div class="topic-icon">${t.icon}</div>
+        <div class="topic-qcount">${t.count} qs</div>
+      </div>
+      <div class="topic-name">${t.name}</div>
+      <div class="topic-desc">${t.desc}</div>
+    </div>
+  `).join('');
+}
+
+function selectTopic(id) {
+  currentTopic = id;
+  document.querySelectorAll('.topic-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('tc-' + id).classList.add('selected');
+  document.getElementById('start-hint').textContent = 'Ready — ' + TOPICS.find(t => t.id === id).name;
+}
+
+function startSession() {
+  if (!currentTopic) {
+    document.getElementById('start-hint').textContent = 'Please select a topic first';
+    return;
+  }
+  qList = [...(QUESTIONS[currentTopic] || [])];
+  if (!qList.length) return;
+  currentQ = 0; solVisible = false; aiVisible = false;
+  renderQuestion();
+  setScreen('question');
+}
+
+function renderQuestion() {
+  const q = qList[currentQ];
+  if (!q) { showResults(); return; }
+
+  const pct = Math.round((currentQ / qList.length) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `Question ${currentQ + 1} of ${qList.length}`;
+
+  document.getElementById('q-year').textContent = q.year;
+  document.getElementById('q-topic-tag').textContent = TOPICS.find(t => t.id === currentTopic)?.name;
+  document.getElementById('q-marks').textContent = q.marks;
+
+  const aiTag = document.getElementById('q-ai-tag');
+  aiTag.style.display = q.isAI ? 'inline-block' : 'none';
+
+  document.getElementById('q-text').innerHTML = q.text;
+  document.getElementById('q-parts').innerHTML = (q.parts || []).map(p =>
+    `<div class="q-part"><span class="q-part-label">${p.label}</span><span>${p.text}</span></div>`
+  ).join('');
+
+  const solCard = document.getElementById('solution-card');
+  solCard.classList.remove('visible');
+  solVisible = false;
+  document.getElementById('sol-label').textContent = 'Show solution';
+
+  const aiPanel = document.getElementById('ai-panel');
+  aiPanel.classList.remove('visible');
+  aiVisible = false;
+  document.getElementById('generating').classList.remove('visible');
+  document.getElementById('ai-input').value = '';
+
+  renderChips();
+
+  if (window.MathJax) {
+    MathJax.typesetPromise([document.getElementById('screen-question')]).catch(() => {});
+  }
+}
+
+function renderChips() {
+  selectedChips = [];
+  const chips = AI_CHIPS[currentTopic] || [];
+  document.getElementById('ai-chips').innerHTML = chips.map(c =>
+    `<span class="chip" onclick="toggleChip(this,'${c}')">${c}</span>`
+  ).join('');
+}
+
+function toggleChip(el, val) {
+  el.classList.toggle('selected');
+  if (selectedChips.includes(val)) selectedChips = selectedChips.filter(v => v !== val);
+  else selectedChips.push(val);
+}
+
+function toggleSolution() {
+  solVisible = !solVisible;
+  const card = document.getElementById('solution-card');
+  const q = qList[currentQ];
+  if (solVisible) {
+    card.classList.add('visible');
+    document.getElementById('sol-steps').innerHTML = (q.solution || [])
+      .map(s => `<div class="sol-step">${s}</div>`).join('');
+    document.getElementById('sol-label').textContent = 'Hide solution';
+    if (window.MathJax) MathJax.typesetPromise([card]).catch(() => {});
+  } else {
+    card.classList.remove('visible');
+    document.getElementById('sol-label').textContent = 'Show solution';
+  }
+}
+
+function toggleAI() {
+  aiVisible = !aiVisible;
+  const panel = document.getElementById('ai-panel');
+  if (aiVisible) panel.classList.add('visible');
+  else panel.classList.remove('visible');
+}
+
+function generateAI() {
+  const gen = document.getElementById('generating');
+  gen.classList.add('visible');
+  setTimeout(() => {
+    gen.classList.remove('visible');
+    const base = AI_QUESTIONS[currentTopic] || AI_QUESTIONS.calculus;
+    const aiQ = { ...base, year: 'AI generated', marks: '3 marks', isAI: true };
+    qList.splice(currentQ + 1, 0, aiQ);
+    document.getElementById('ai-panel').classList.remove('visible');
+    aiVisible = false;
+    nextQuestion();
+  }, 1800);
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= qList.length) { showResults(); return; }
+  renderQuestion();
+}
+
+function showResults() {
+  const topicName = TOPICS.find(t => t.id === currentTopic)?.name || currentTopic;
+  const total = qList.length;
+  const aiCount = qList.filter(q => q.isAI).length;
+  const hscCount = total - aiCount;
+
+  document.getElementById('result-big').textContent = total + ' qs';
+  document.getElementById('result-sub').textContent = 'completed · ' + topicName;
+  document.getElementById('result-table').innerHTML = `
+    <div class="result-row"><span>Topic</span><span>${topicName}</span></div>
+    <div class="result-row"><span>Past HSC questions</span><span>${hscCount}</span></div>
+    <div class="result-row"><span>AI-generated variations</span><span>${aiCount}</span></div>
+    <div class="result-row"><span>Total questions</span><span>${total}</span></div>
+  `;
+  setScreen('results');
+}
+
+function restartSameTopic() {
+  if (!currentTopic) { showHome(); return; }
+  qList = [...(QUESTIONS[currentTopic] || [])];
+  currentQ = 0; solVisible = false; aiVisible = false;
+  renderQuestion();
+  setScreen('question');
+}
+
+renderTopics();
+</script>
+</body>
+</html>
